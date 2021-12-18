@@ -1,0 +1,8 @@
+[package]
+name = "bessie"
+version = "0.0.0"
+edition = "2021"
+
+[dependencies]
+blake3 = "1"
+rand = "0.8"
