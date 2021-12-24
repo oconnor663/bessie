@@ -1,0 +1,13 @@
+[package]
+name = "bessie_bin"
+version = "0.0.0"
+edition = "2021"
+
+[[bin]]
+name = "bessie"
+path = "src/main.rs"
+
+[dependencies]
+bessie = { path = "../lib" }
+clap = "2.34.0"
+hex = "0.4.3"

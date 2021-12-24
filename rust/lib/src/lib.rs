@@ -445,7 +445,7 @@ impl<R: Read> Read for DecryptReader<R> {
             )?;
             self.next_chunk_index += 1;
             self.plaintext_buf_end = plaintext_slice.len();
-            if plaintext_slice.len() < CHUNK_LEN {
+            if let FinalFlag::Final = final_flag {
                 self.at_eof = true;
             }
         }
