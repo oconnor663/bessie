@@ -397,13 +397,15 @@ impl<R: Read> DecryptReader<R> {
 // and ErrorKind::Interrupted errors.
 fn read_exact_or_eof(reader: &mut impl Read, mut buf: &mut [u8]) -> std::io::Result<usize> {
     let mut total_read = 0;
-    loop {
+    while !buf.is_empty() {
         match reader.read(&mut buf) {
             Ok(n) => {
                 total_read += n;
-                if n == 0 || total_read == buf.len() {
-                    return Ok(total_read);
+                if n == 0 {
+                    // EOF
+                    break;
                 }
+                buf = &mut buf[n..];
             }
             Err(e) => {
                 if e.kind() == std::io::ErrorKind::Interrupted {
@@ -413,6 +415,7 @@ fn read_exact_or_eof(reader: &mut impl Read, mut buf: &mut [u8]) -> std::io::Res
             }
         }
     }
+    Ok(total_read)
 }
 
 impl<R: Read> Read for DecryptReader<R> {
