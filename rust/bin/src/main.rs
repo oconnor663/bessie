@@ -23,7 +23,8 @@ fn parse_args() -> clap::ArgMatches<'static> {
         .arg(
             clap::Arg::with_name(ZERO_KEY_ARG)
                 .long(ZERO_KEY_ARG)
-                .short("z"),
+                .short("z")
+                .help("use 32 zero bytes as the key"),
         )
         .get_matches()
 }
