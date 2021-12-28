@@ -149,8 +149,9 @@ fn ciphertext_len(plaintext_len: u64) -> Option<u64> {
 
 fn plaintext_len(ciphertext_len: u64) -> Option<u64> {
     let chunks_len = ciphertext_len.checked_sub(NONCE_LEN as u64)?;
-    let num_chunks = (chunks_len / (CHUNK_LEN + TAG_LEN) as u64) + 1;
-    chunks_len.checked_sub(num_chunks * TAG_LEN as u64)
+    let whole_chunks = chunks_len / (CHUNK_LEN + TAG_LEN) as u64;
+    let last_chunk = chunks_len % (CHUNK_LEN + TAG_LEN) as u64;
+    Some((whole_chunks * CHUNK_LEN as u64) + last_chunk.checked_sub(TAG_LEN as u64)?)
 }
 
 pub fn encrypt(key: &Key, plaintext: &[u8]) -> Vec<u8> {
@@ -584,5 +585,22 @@ mod tests {
             }
             assert_eq!(one_at_a_time_reader.read(&mut [0]).unwrap(), 0);
         }
+    }
+
+    #[test]
+    fn test_length_functions() {
+        for &size in INPUT_SIZES {
+            let ciphertext = encrypt(&[0; 32], &vec![0; size]);
+            assert_eq!(Some(ciphertext.len() as u64), ciphertext_len(size as u64));
+            assert_eq!(Some(size as u64), plaintext_len(ciphertext.len() as u64));
+        }
+
+        assert_eq!(None, plaintext_len(0));
+        assert_eq!(None, plaintext_len((NONCE_LEN + TAG_LEN - 1) as u64));
+        assert_eq!(
+            None,
+            plaintext_len((NONCE_LEN + CHUNK_LEN + TAG_LEN) as u64)
+        );
+        assert_eq!(None, ciphertext_len(u64::MAX));
     }
 }
