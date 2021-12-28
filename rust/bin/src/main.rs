@@ -8,6 +8,7 @@ const ZERO_KEY_ARG: &str = "zero-key";
 
 fn parse_args() -> clap::ArgMatches<'static> {
     clap::App::new("bessie")
+        .about("THIS COMMAND IS FOR TESTING AND DEMO PURPOSES ONLY.\nPASSING SECRET KEYS ON THE COMMAND LINE IS NOT SECURE.")
         .version(env!("CARGO_PKG_VERSION"))
         .arg(clap::Arg::with_name(KEY_ARG).required_unless(ZERO_KEY_ARG))
         .arg(
