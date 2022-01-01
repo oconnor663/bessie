@@ -1,33 +1,44 @@
+use clap::Parser;
+use std::fs::File;
 use std::io::prelude::*;
+use std::path::PathBuf;
 
-const KEY_ARG: &str = "key";
+#[derive(clap::Parser, Debug)]
+#[clap(version, about)]
+struct Args {
+    #[clap(subcommand)]
+    subcommand: Subcommand,
 
-const DECRYPT_ARG: &str = "decrypt";
-const HEX_ARG: &str = "hex";
-const ZERO_KEY_ARG: &str = "zero-key";
+    #[clap(short, long)]
+    help: bool,
+}
 
-fn parse_args() -> clap::ArgMatches<'static> {
-    clap::App::new("bessie")
-        .about("THIS COMMAND IS FOR TESTING AND DEMO PURPOSES ONLY.\nPASSING SECRET KEYS ON THE COMMAND LINE IS NOT SECURE.")
-        .version(env!("CARGO_PKG_VERSION"))
-        .arg(clap::Arg::with_name(KEY_ARG).required_unless(ZERO_KEY_ARG))
-        .arg(
-            clap::Arg::with_name(DECRYPT_ARG)
-                .long(DECRYPT_ARG)
-                .short("d"),
-        )
-        .arg(
-            clap::Arg::with_name(HEX_ARG)
-                .long(HEX_ARG)
-                .help("either encrypt to hex, or decrypt from hex"),
-        )
-        .arg(
-            clap::Arg::with_name(ZERO_KEY_ARG)
-                .long(ZERO_KEY_ARG)
-                .short("z")
-                .help("use 32 zero bytes as the key"),
-        )
-        .get_matches()
+#[derive(clap::Subcommand, Debug)]
+enum Subcommand {
+    Encrypt(SubcommandArgs),
+    Decrypt(SubcommandArgs),
+}
+
+#[derive(clap::Args, Debug)]
+struct SubcommandArgs {
+    // positional
+    /// the 32-byte key, encoded as hex (or "zero" for 32 null bytes)
+    key: String,
+    /// the input file (if omitted, stdin is used; if provided, output is also required)
+    #[clap(requires = "output")]
+    input: Option<PathBuf>,
+    /// the output file (if omitted, stdout is used)
+    output: Option<PathBuf>,
+
+    // flags
+    /// hex-encode after encryption, or hex-decode before decryption
+    #[clap(long, short)]
+    hex: bool,
+}
+
+#[test]
+fn test_clap_asserts() {
+    <Args as clap::IntoApp>::into_app().debug_assert();
 }
 
 struct HexWriter<W> {
@@ -87,44 +98,61 @@ fn decrypt(key: &[u8; 32], input: &mut dyn Read, output: &mut dyn Write) {
 }
 
 fn main() {
-    let args = parse_args();
+    let args = Args::parse();
 
-    let key_vec = if args.is_present(ZERO_KEY_ARG) {
+    let is_encrypt = matches!(args.subcommand, Subcommand::Encrypt(_));
+    let subcommand_args = match &args.subcommand {
+        Subcommand::Encrypt(a) => a,
+        Subcommand::Decrypt(a) => a,
+    };
+
+    let key_vec = if subcommand_args.key == "zero" {
         vec![0; 32]
     } else {
-        hex::decode(args.value_of(KEY_ARG).unwrap()).expect("invalid hex")
+        hex::decode(&subcommand_args.key).expect("invalid hex")
     };
     let key_array: &[u8; 32] = key_vec[..].try_into().expect("key must be 32 bytes");
 
     let stdin = std::io::stdin();
     let stdout = std::io::stdout();
-
     let mut input: &mut dyn Read = &mut stdin.lock();
     let mut output: &mut dyn Write = &mut stdout.lock();
 
+    let mut input_file;
+    if let Some(path) = &subcommand_args.input {
+        input_file = File::open(path).expect("opening input failed");
+        input = &mut input_file;
+    }
+
+    let mut output_file;
+    if let Some(path) = &subcommand_args.output {
+        output_file = File::create(path).expect("creating output file failed");
+        output = &mut output_file;
+    }
+
     let mut hex_writer;
     let mut hex_reader;
-    if args.is_present(HEX_ARG) {
-        if args.is_present(DECRYPT_ARG) {
-            hex_reader = HexReader {
-                inner_reader: input,
-            };
-            input = &mut hex_reader;
-        } else {
+    if subcommand_args.hex {
+        if is_encrypt {
             hex_writer = HexWriter {
                 inner_writer: output,
             };
             output = &mut hex_writer;
+        } else {
+            hex_reader = HexReader {
+                inner_reader: input,
+            };
+            input = &mut hex_reader;
         }
     }
 
-    if args.is_present(DECRYPT_ARG) {
-        decrypt(key_array, input, output);
-    } else {
+    if is_encrypt {
         encrypt(key_array, input, output);
+    } else {
+        decrypt(key_array, input, output);
     }
 
-    if args.is_present(HEX_ARG) && !args.is_present(DECRYPT_ARG) {
+    if subcommand_args.hex && is_encrypt {
         println!();
     }
 }

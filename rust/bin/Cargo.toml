@@ -2,6 +2,7 @@
 name = "bessie_bin"
 version = "0.0.0"
 edition = "2021"
+description = "a demo/test CLI for Bessie, NOT FOR PRODUCTION USE"
 
 [[bin]]
 name = "bessie"
@@ -9,5 +10,5 @@ path = "src/main.rs"
 
 [dependencies]
 bessie = { path = "../lib" }
-clap = "2.34.0"
+clap = { version = "3.0.0", features = ["derive"] }
 hex = "0.4.3"
