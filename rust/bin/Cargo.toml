@@ -2,7 +2,9 @@
 name = "bessie_bin"
 version = "0.0.0"
 edition = "2021"
-description = "a demo/test CLI for Bessie, NOT FOR PRODUCTION USE"
+description = "a demo/test CLI for the Bessie cipher, NOT FOR PRODUCTION USE"
+readme = "../../README.md"
+repository = "https://github.com/oconnor663/bessie"
 
 [[bin]]
 name = "bessie"
