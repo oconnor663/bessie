@@ -186,7 +186,12 @@ fn decrypt<R: Read + Seek>(key: [u8; 32], input: R, mut output: Output, seek: Op
             .seek(io::SeekFrom::Start(offset))
             .expect("seek error");
     }
-    io::copy(&mut decrypter, &mut output).expect("decryption error");
+    let result = io::copy(&mut decrypter, &mut output);
+    if let Err(e) = result {
+        if e.kind() != io::ErrorKind::BrokenPipe {
+            panic!("decryption error: {}", e);
+        }
+    }
 }
 
 fn handle_common_args(common: &CommonSubcommandArgs) -> ([u8; 32], Input, Output) {
