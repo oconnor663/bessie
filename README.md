@@ -32,7 +32,7 @@ and demo purposes only):
 head -c 1000000 /dev/urandom > myfile
 bessie encrypt zero myfile myfile_enc
 bessie decrypt zero myfile_enc myfile_copy
-cmp myfile myfile2
+cmp myfile myfile_copy
 ```
 
 To decrypt just the last byte of the encrypted file:
