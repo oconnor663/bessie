@@ -42,53 +42,43 @@ fn test_encrypt_decrypt() {
         ];
         for key in keys {
             dbg!(key);
-            for use_hex in [true, false] {
-                dbg!(use_hex);
+            // Encrypt the input.
+            let ciphertext = cmd!(bin_path(), "encrypt", key)
+                .stdin_bytes(&input[..])
+                .stdout_capture()
+                .run()
+                .unwrap()
+                .stdout;
 
-                // Encrypt the input.
-                let mut encrypt_args = vec!["encrypt", key];
-                if use_hex {
-                    encrypt_args.push("--hex");
-                }
-                let ciphertext = cmd(bin_path(), &encrypt_args)
-                    .stdin_bytes(&input[..])
-                    .stdout_capture()
-                    .run()
-                    .unwrap()
-                    .stdout;
+            // Decrypt the input and compare.
+            let plaintext = cmd!(bin_path(), "decrypt", key)
+                .stdin_bytes(&ciphertext[..])
+                .stdout_capture()
+                .run()
+                .unwrap()
+                .stdout;
+            assert_eq!(input, plaintext);
 
-                // Decrypt the input and compare.
-                let mut decrypt_args = vec!["decrypt", key];
-                if use_hex {
-                    decrypt_args.push("--hex");
-                }
-                let plaintext = cmd(bin_path(), &decrypt_args)
-                    .stdin_bytes(&ciphertext[..])
-                    .stdout_capture()
-                    .run()
-                    .unwrap()
-                    .stdout;
-                assert_eq!(input, plaintext);
-
-                // Seek halfway through the input and compare again.
-                let mut tmp = tempfile::NamedTempFile::new().unwrap();
-                tmp.write_all(&ciphertext).unwrap();
-                tmp.flush().unwrap();
-                let seek_target = size / 2;
-                dbg!(seek_target);
-                let half_input = &input[seek_target..];
-                let mut seek_args = decrypt_args.clone();
-                let seek_flag = format!("--seek={}", seek_target);
-                seek_args.push(&seek_flag);
-                let path_string = tmp.path().to_str().expect("invalid uft8 tempfile path");
-                seek_args.push(&path_string);
-                let half_plaintext = cmd(bin_path(), &seek_args)
-                    .stdout_capture()
-                    .run()
-                    .unwrap()
-                    .stdout;
-                assert_eq!(half_input, half_plaintext);
-            }
+            // Seek halfway through the input and compare again.
+            let mut tmp = tempfile::NamedTempFile::new().unwrap();
+            tmp.write_all(&ciphertext).unwrap();
+            tmp.flush().unwrap();
+            let seek_target = size / 2;
+            dbg!(seek_target);
+            let half_input = &input[seek_target..];
+            let half_plaintext = cmd!(
+                bin_path(),
+                "decrypt",
+                key,
+                tmp.path().to_str().expect("invalid uft8 tempfile path"),
+                "--seek",
+                seek_target.to_string(),
+            )
+            .stdout_capture()
+            .run()
+            .unwrap()
+            .stdout;
+            assert_eq!(half_input, half_plaintext);
         }
     }
 }
