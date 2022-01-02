@@ -12,3 +12,7 @@ path = "src/main.rs"
 bessie = { path = "../lib" }
 clap = { version = "3.0.0", features = ["derive"] }
 hex = "0.4.3"
+
+[dev-dependencies]
+duct = "0.13.5"
+tempfile = "3.2.0"

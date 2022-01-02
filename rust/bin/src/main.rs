@@ -140,14 +140,6 @@ impl<R: Read> Read for HexReader<R> {
             .take(hex_buf_size as u64)
             .read_to_end(&mut hex_buf)?;
         debug_assert_eq!(hex_buf.capacity(), hex_buf_size);
-        // Strip trailing whitespace.
-        while hex_buf
-            .last()
-            .map(|c| c.is_ascii_whitespace())
-            .unwrap_or(false)
-        {
-            hex_buf.pop();
-        }
         let decoded = hex::decode(&hex_buf)
             .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "invalid hex"))?;
         buf[..decoded.len()].copy_from_slice(&decoded);
@@ -223,7 +215,6 @@ fn main() {
             let (key, input, output) = handle_common_args(&common);
             if hex {
                 encrypt(key, input, HexWriter::new(output));
-                println!();
             } else {
                 encrypt(key, input, output);
             }

@@ -4,9 +4,9 @@ use std::io::prelude::*;
 use std::io::SeekFrom;
 
 pub const KEY_LEN: usize = 32;
-const CHUNK_LEN: usize = 16384; // 2^14
-const NONCE_LEN: usize = 24;
-const TAG_LEN: usize = 32;
+pub const CHUNK_LEN: usize = 16384; // 2^14
+pub const NONCE_LEN: usize = 24;
+pub const TAG_LEN: usize = 32;
 
 type Key = [u8; KEY_LEN];
 type Nonce = [u8; NONCE_LEN];
