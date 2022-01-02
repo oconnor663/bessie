@@ -5,7 +5,7 @@ use std::io::prelude::*;
 use std::path::PathBuf;
 
 #[derive(clap::Parser, Debug)]
-#[clap(version, about)]
+#[clap(name(env!("CARGO_BIN_NAME")), version, about)]
 struct Args {
     #[clap(subcommand)]
     sub: Subcommand,

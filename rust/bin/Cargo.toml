@@ -12,7 +12,7 @@ name = "bessie"
 path = "src/main.rs"
 
 [dependencies]
-bessie = { path = "../lib" }
+bessie = { version = "0.0", path = "../lib" }
 clap = { version = "3.0.0", features = ["derive"] }
 hex = "0.4.3"
 
