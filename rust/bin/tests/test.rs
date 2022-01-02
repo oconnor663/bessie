@@ -1,4 +1,5 @@
 use bessie::CHUNK_LEN;
+use duct::cmd;
 use std::io::prelude::*;
 
 const INPUT_SIZES: &[usize] = &[
@@ -25,13 +26,8 @@ fn paint_input(input: &mut [u8]) {
     }
 }
 
-fn bessie_cmd(args: &[&str], input: &[u8]) -> Vec<u8> {
-    duct::cmd(env!("CARGO_BIN_EXE_bessie"), args)
-        .stdin_bytes(input)
-        .stdout_capture()
-        .run()
-        .expect("command failed")
-        .stdout
+fn bin_path() -> &'static str {
+    env!("CARGO_BIN_EXE_bessie")
 }
 
 #[test]
@@ -54,14 +50,24 @@ fn test_encrypt_decrypt() {
                 if use_hex {
                     encrypt_args.push("--hex");
                 }
-                let ciphertext = bessie_cmd(&encrypt_args, &input);
+                let ciphertext = cmd(bin_path(), &encrypt_args)
+                    .stdin_bytes(&input[..])
+                    .stdout_capture()
+                    .run()
+                    .unwrap()
+                    .stdout;
 
                 // Decrypt the input and compare.
                 let mut decrypt_args = vec!["decrypt", key];
                 if use_hex {
                     decrypt_args.push("--hex");
                 }
-                let plaintext = bessie_cmd(&decrypt_args, &ciphertext);
+                let plaintext = cmd(bin_path(), &decrypt_args)
+                    .stdin_bytes(&ciphertext[..])
+                    .stdout_capture()
+                    .run()
+                    .unwrap()
+                    .stdout;
                 assert_eq!(input, plaintext);
 
                 // Seek halfway through the input and compare again.
@@ -76,9 +82,29 @@ fn test_encrypt_decrypt() {
                 seek_args.push(&seek_flag);
                 let path_string = tmp.path().to_str().expect("invalid uft8 tempfile path");
                 seek_args.push(&path_string);
-                let half_plaintext = bessie_cmd(&seek_args, &ciphertext);
+                let half_plaintext = cmd(bin_path(), &seek_args)
+                    .stdout_capture()
+                    .run()
+                    .unwrap()
+                    .stdout;
                 assert_eq!(half_input, half_plaintext);
             }
         }
     }
+}
+
+#[test]
+fn test_decryption_failure() {
+    let mut ciphertext = bessie::encrypt(&[0; 32], b"hello world");
+    // Corrupt the last byte of ciphertext.
+    *ciphertext.last_mut().unwrap() ^= 1;
+    let status = cmd!(bin_path(), "decrypt", "zero")
+        .stdin_bytes(ciphertext)
+        .stderr_null()
+        .stdout_null()
+        .unchecked()
+        .run()
+        .unwrap()
+        .status;
+    assert!(!status.success());
 }

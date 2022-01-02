@@ -848,4 +848,42 @@ mod tests {
             }
         }
     }
+
+    #[test]
+    fn test_bad_ciphertext() {
+        for &size in INPUT_SIZES {
+            dbg!(size);
+            let input = test_input(size);
+            let mut ciphertext = encrypt(&test_key(), &input);
+            decrypt(&test_key(), &ciphertext).unwrap();
+            // Corrupt a byte of ciphertext. If the input is longer than one chunk, put the
+            // corruption in the first byte of the second chunk.
+            if size > CHUNK_LEN {
+                ciphertext[NONCE_LEN + CHUNK_LEN + TAG_LEN] ^= 1;
+            } else {
+                ciphertext[0] ^= 1;
+            }
+            decrypt(&test_key(), &ciphertext).unwrap_err();
+
+            // Test the incremental decrypter.
+            let mut reader = DecryptReader::new(&test_key(), Cursor::new(&ciphertext[..]));
+            // If the input is longer than one chunk, confirm that the first chunk decrypts
+            // successfully.
+            if size > CHUNK_LEN {
+                let mut first_chunk = [0; CHUNK_LEN];
+                reader.read_exact(&mut first_chunk).unwrap();
+            }
+            // Fail on the corrupt chunk.
+            let e = reader.read(&mut [0]).unwrap_err();
+            assert_eq!(io::ErrorKind::InvalidData, e.kind());
+            // If the input is longer than two chunks, confirm that seeking past the corrupt chunk
+            // makes the rest decrypt successfully.
+            if size > 2 * CHUNK_LEN {
+                let mut rest = Vec::new();
+                reader.seek(SeekFrom::Start(2 * CHUNK_LEN as u64)).unwrap();
+                reader.read_to_end(&mut rest).unwrap();
+                assert_eq!(&input[2 * CHUNK_LEN..], rest);
+            }
+        }
+    }
 }
