@@ -166,7 +166,11 @@ pub fn encrypt(key: &Key, plaintext: &[u8]) -> Vec<u8> {
         .try_into()
         .expect("length overflows a usize");
     let mut ciphertext = vec![0; ciphertext_len];
+    encrypt_to_slice(key, plaintext, &mut ciphertext);
+    ciphertext
+}
 
+pub fn encrypt_to_slice(key: &Key, plaintext: &[u8], ciphertext: &mut [u8]) {
     // NB: This is a cryptographically secure RNG.
     let nonce: Nonce = rand::random();
     ciphertext[..NONCE_LEN].copy_from_slice(&nonce);
@@ -197,8 +201,6 @@ pub fn encrypt(key: &Key, plaintext: &[u8]) -> Vec<u8> {
         plaintext_chunks.remainder(),
         ciphertext_chunks.into_remainder(),
     );
-
-    ciphertext
 }
 
 pub fn decrypt(key: &Key, ciphertext: &[u8]) -> Result<Vec<u8>, Error> {
@@ -208,7 +210,11 @@ pub fn decrypt(key: &Key, ciphertext: &[u8]) -> Result<Vec<u8>, Error> {
         return Err(Error::truncated());
     };
     let mut plaintext = vec![0; plaintext_len];
+    decrypt_to_slice(key, ciphertext, &mut plaintext)?;
+    Ok(plaintext)
+}
 
+pub fn decrypt_to_slice(key: &Key, ciphertext: &[u8], plaintext: &mut [u8]) -> Result<(), Error> {
     // Extract the nonce.
     let nonce: &Nonce = &ciphertext[..NONCE_LEN].try_into().unwrap();
 
@@ -239,7 +245,7 @@ pub fn decrypt(key: &Key, ciphertext: &[u8]) -> Result<Vec<u8>, Error> {
         plaintext_chunks.into_remainder(),
     )?;
 
-    Ok(plaintext)
+    Ok(())
 }
 
 pub struct EncryptWriter<W: Write> {
