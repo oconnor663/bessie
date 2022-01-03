@@ -224,26 +224,36 @@ pub fn decrypt_to_slice(key: &Key, ciphertext: &[u8], plaintext: &mut [u8]) -> R
     let mut plaintext_chunks = plaintext.chunks_exact_mut(CHUNK_LEN);
     for (ciphertext_chunk, plaintext_chunk) in ciphertext_chunks.by_ref().zip(&mut plaintext_chunks)
     {
-        decrypt_chunk(
+        let chunk_result = decrypt_chunk(
             key,
             &nonce,
             chunk_index,
             FinalFlag::NotFinal,
             ciphertext_chunk,
             plaintext_chunk,
-        )?;
+        );
+        if let Err(e) = chunk_result {
+            // Wipe the whole output slice out of an abundance of caution.
+            plaintext.fill(0);
+            return Err(e);
+        }
         chunk_index += 1;
     }
 
     // Decrypt the final chunk.
-    decrypt_chunk(
+    let chunk_result = decrypt_chunk(
         key,
         &nonce,
         chunk_index,
         FinalFlag::Final,
         ciphertext_chunks.remainder(),
         plaintext_chunks.into_remainder(),
-    )?;
+    );
+    if let Err(e) = chunk_result {
+        // Wipe the whole output slice out of an abundance of caution.
+        plaintext.fill(0);
+        return Err(e);
+    }
 
     Ok(())
 }

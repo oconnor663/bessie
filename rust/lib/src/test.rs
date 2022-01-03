@@ -258,3 +258,19 @@ fn test_bad_ciphertext() {
         }
     }
 }
+
+#[test]
+fn test_zeroing_after_decryption_failure() {
+    let input = vec![0xaa; 2 * CHUNK_LEN + 1];
+    let mut ciphertext = encrypt(&test_key(), &input);
+    let mut plaintext = vec![0xbb; 2 * CHUNK_LEN + 1];
+    // Decrypt the ciphertext with the wrong key and make sure that the plaintext buffer gets
+    // entirely zeroed out.
+    decrypt_to_slice(&[0; 32], &ciphertext, &mut plaintext).unwrap_err();
+    assert_eq!(plaintext, vec![0; plaintext.len()]);
+    // Same but with the right key and a corrupted final byte.
+    *ciphertext.last_mut().unwrap() ^= 1;
+    let mut plaintext = vec![0xbb; 2 * CHUNK_LEN + 1];
+    decrypt_to_slice(&test_key(), &ciphertext, &mut plaintext).unwrap_err();
+    assert_eq!(plaintext, vec![0; plaintext.len()]);
+}
