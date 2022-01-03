@@ -167,6 +167,20 @@ pub fn plaintext_len(ciphertext_len: u64) -> Option<u64> {
     Some((whole_chunks * CHUNK_LEN as u64) + last_chunk.checked_sub(TAG_LEN as u64)?)
 }
 
+/// Create a new 32-byte key from a cryptographically secure random number generator.
+pub fn generate_key() -> Key {
+    // NB: rand::random() is a cryptographically secure RNG. This is a security requirement.
+    rand::random()
+}
+
+fn generate_nonce() -> Nonce {
+    // NB: rand::random() is a cryptographically secure RNG. This isn't strictly speaking a
+    // security requirement, but it's crucial that nonces never repeat. If we ever switch to a
+    // non-cryptographic RNG here as a performance optimization (unlikely), we'll need to make sure
+    // that the seed still comes from the OS.
+    rand::random()
+}
+
 pub fn encrypt(key: &Key, plaintext: &[u8]) -> Vec<u8> {
     let ciphertext_len: usize = ciphertext_len(plaintext.len() as u64)
         .expect("length overflows a u64")
@@ -178,8 +192,7 @@ pub fn encrypt(key: &Key, plaintext: &[u8]) -> Vec<u8> {
 }
 
 pub fn encrypt_to_slice(key: &Key, plaintext: &[u8], ciphertext: &mut [u8]) {
-    // NB: This is a cryptographically secure RNG.
-    let nonce: Nonce = rand::random();
+    let nonce = generate_nonce();
     ciphertext[..NONCE_LEN].copy_from_slice(&nonce);
 
     // Encrypt all non-final chunks.
@@ -280,8 +293,7 @@ impl<W: Write> EncryptWriter<W> {
         Self {
             inner_writer,
             long_term_key: *key,
-            // NB: This is a cryptographically secure RNG.
-            nonce: rand::random(),
+            nonce: generate_nonce(),
             chunk_index: 0,
             plaintext_buf: [0; CHUNK_LEN],
             plaintext_buf_len: 0,
