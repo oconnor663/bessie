@@ -146,14 +146,21 @@ fn decrypt_chunk(
     Ok(())
 }
 
-fn ciphertext_len(plaintext_len: u64) -> Option<u64> {
+/// Compute the length of a ciphertext, given the length of a plaintext.
+///
+/// This function returns `None` if the resulting ciphertext length would overflow a `u64`.
+pub fn ciphertext_len(plaintext_len: u64) -> Option<u64> {
     let num_chunks = (plaintext_len / CHUNK_LEN as u64) + 1;
     plaintext_len
         .checked_add(NONCE_LEN as u64)?
         .checked_add(num_chunks * TAG_LEN as u64)
 }
 
-fn plaintext_len(ciphertext_len: u64) -> Option<u64> {
+/// Compute the length of a plaintext, given the length of a ciphertext.
+///
+/// Ciphertexts contain nonces and tags of a fixed size, so not all possible values of
+/// `ciphertext_len` are valid. For invalid lengths, this function returns `None`.
+pub fn plaintext_len(ciphertext_len: u64) -> Option<u64> {
     let chunks_len = ciphertext_len.checked_sub(NONCE_LEN as u64)?;
     let whole_chunks = chunks_len / (CHUNK_LEN + TAG_LEN) as u64;
     let last_chunk = chunks_len % (CHUNK_LEN + TAG_LEN) as u64;
