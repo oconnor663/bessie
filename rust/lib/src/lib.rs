@@ -1,3 +1,30 @@
+//! Bessie is an authenticated, chunked cipher based on
+//! [BLAKE3](https://github.com/BLAKE3-team/BLAKE3). It's still in the design stages, and it's not
+//! suitable for production use.
+//!
+//! # Examples
+//!
+//! Encrypt a message.
+//!
+//! ```rust
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
+//! let key = bessie::generate_key();
+//! let ciphertext: Vec<u8> = bessie::encrypt(&key, b"hello world");
+//! # Ok(())
+//! # }
+//! ```
+//!
+//! Decrypt that message.
+//!
+//! ```rust
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
+//! # let key = bessie::generate_key();
+//! # let ciphertext: Vec<u8> = bessie::encrypt(&key, b"hello world");
+//! let plaintext: Vec<u8> = bessie::decrypt(&key, &ciphertext)?;
+//! assert_eq!(b"hello world", &plaintext[..]);
+//! # Ok(())
+//! # }
+//! ```
 use std::cmp::min;
 use std::io;
 use std::io::prelude::*;
@@ -14,6 +41,12 @@ pub const TAG_LEN: usize = 32;
 type Key = [u8; KEY_LEN];
 type Nonce = [u8; NONCE_LEN];
 
+/// An opaque decryption error.
+///
+/// Errors could represent either corruption, where ciphertext bytes or key bytes have been
+/// changed, or truncation, where a valid ciphertext has been cut short. Some truncations are also
+/// indistinguishable from corruption. `Error::to_string` distinguishes between these two cases to
+/// help with debugging, but application code should treat them as equivalent.
 #[derive(Debug)]
 pub struct Error {
     msg: &'static str,
@@ -181,6 +214,7 @@ fn generate_nonce() -> Nonce {
     rand::random()
 }
 
+/// Encrypt a message and return the ciphertext as a `Vec<u8>`.
 pub fn encrypt(key: &Key, plaintext: &[u8]) -> Vec<u8> {
     let ciphertext_len: usize = ciphertext_len(plaintext.len() as u64)
         .expect("length overflows a u64")
@@ -191,6 +225,10 @@ pub fn encrypt(key: &Key, plaintext: &[u8]) -> Vec<u8> {
     ciphertext
 }
 
+/// Encrypt a message and write the ciphertext to an existing slice.
+///
+/// This function does not allocate memory. However, `ciphertext.len()` must be exactly equal to
+/// [`ciphertext_len(plaintext.len())`](ciphertext_len), or else this function will panic.
 pub fn encrypt_to_slice(key: &Key, plaintext: &[u8], ciphertext: &mut [u8]) {
     let nonce = generate_nonce();
     ciphertext[..NONCE_LEN].copy_from_slice(&nonce);
@@ -223,6 +261,9 @@ pub fn encrypt_to_slice(key: &Key, plaintext: &[u8], ciphertext: &mut [u8]) {
     );
 }
 
+/// Decrypt a message and return the plaintext as `Result` of `Vec<u8>`.
+///
+/// If the ciphertext or key has been changed, decryption will return `Err`.
 pub fn decrypt(key: &Key, ciphertext: &[u8]) -> Result<Vec<u8>, Error> {
     let plaintext_len = if let Some(len) = plaintext_len(ciphertext.len() as u64) {
         len as usize
@@ -234,6 +275,16 @@ pub fn decrypt(key: &Key, ciphertext: &[u8]) -> Result<Vec<u8>, Error> {
     Ok(plaintext)
 }
 
+/// Decrypt a message, write the plaintext to an existing slice, and return a `Result`.
+///
+/// If the ciphertext or key has been changed, decryption will return `Err`.
+///
+/// This function does not allocate memory. However, `plaintext.len()` must be exactly equal to
+/// [`plaintext_len(ciphertext.len())`](plaintext_len), or else this function will panic.
+///
+/// If decryption fails, this function will zero out the entire `plaintext` slice, as an extra
+/// precaution to prevent callers who ignore the returned `Err` from reading unauthenticated
+/// plaintext. However, this behavior is not guaranteed.
 pub fn decrypt_to_slice(key: &Key, ciphertext: &[u8], plaintext: &mut [u8]) -> Result<(), Error> {
     // Extract the nonce.
     let nonce: &Nonce = &ciphertext[..NONCE_LEN].try_into().unwrap();
@@ -278,6 +329,30 @@ pub fn decrypt_to_slice(key: &Key, ciphertext: &[u8], plaintext: &mut [u8]) -> R
     Ok(())
 }
 
+/// An incremental encrypter supporting [`std::io::Write`].
+///
+/// For incremental decryption, see [`DecryptReader`].
+///
+/// # Example
+///
+/// Encrypt a file incrementally.
+///
+/// ```rust
+/// # use std::io::prelude::*;
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+/// # let some_file = Vec::new();
+/// // let some_file = std::fs::File::create(...)?;
+/// let key = bessie::generate_key();
+/// let mut encrypter = bessie::EncryptWriter::new(&key, some_file);
+/// encrypter.write_all(b"foo")?;
+/// encrypter.write_all(b"bar")?;
+/// encrypter.write_all(b"baz")?;
+/// // NOTE: Calling finalize is required. If you forget to finalize, decryption will fail.
+/// encrypter.finalize()?;
+/// # assert_eq!(b"foobarbaz"[..], bessie::decrypt(&key, &encrypter.into_inner()).unwrap());
+/// # Ok(())
+/// # }
+/// ```
 pub struct EncryptWriter<W: Write> {
     inner_writer: W,
     long_term_key: Key,
@@ -289,6 +364,7 @@ pub struct EncryptWriter<W: Write> {
 }
 
 impl<W: Write> EncryptWriter<W> {
+    /// Construct a new `EncryptWriter` from a key and an output stream.
     pub fn new(key: &Key, inner_writer: W) -> Self {
         Self {
             inner_writer,
@@ -348,6 +424,8 @@ impl<W: Write> EncryptWriter<W> {
         Ok(self.plaintext_buf_len)
     }
 
+    /// Encrypt and write the final chunk. You must call `finalize` after you're done writing, or
+    /// else the final chunk will be missing and decryption will fail.
     pub fn finalize(&mut self) -> io::Result<()> {
         self.bail_if_errored_before()?;
         // This will debug_assert! that the final chunk is short.
@@ -355,8 +433,8 @@ impl<W: Write> EncryptWriter<W> {
         Ok(())
     }
 
-    /// Consume self and return the inner writer. Note any unfinalized plaintext in internal buffer
-    /// will be lost.
+    /// Consume self and return the inner writer. Note any unfinalized plaintext in the internal
+    /// buffer will be lost.
     pub fn into_inner(self) -> W {
         self.inner_writer
     }
@@ -392,6 +470,57 @@ impl<W: Write> std::fmt::Debug for EncryptWriter<W> {
     }
 }
 
+/// An incremental decrypter supporting [`std::io::Read`] and [`std::io::Seek`].
+///
+/// If this stream encounters any decryption errors, they will be converted into [`std::io::Error`]
+/// with [`ErrorKind::InvalidData`](std::io::ErrorKind). Other IO errors are returned unmodified.
+///
+/// For incremental encryption, see [`EncryptWriter`].
+///
+/// # Example
+///
+/// Decrypt a file incrementally. Assume the encrypted plaintext is `foobarbaz`, as in the
+/// [`EncryptWriter`] example.
+///
+/// ```rust
+/// # use std::io::prelude::*;
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+/// # let key = bessie::generate_key();
+/// # let ciphertext = bessie::encrypt(&key, b"foobarbaz");
+/// # let mut some_file = std::io::Cursor::new(ciphertext);
+/// // let key = ...;
+/// // let some_file = std::fs::File::open(...)?;
+/// let mut decrypter = bessie::DecryptReader::new(&key, some_file);
+/// let mut read_buf = [0; 3];
+/// decrypter.read_exact(&mut read_buf)?;
+/// assert_eq!(b"foo", &read_buf);
+/// decrypter.read_exact(&mut read_buf)?;
+/// assert_eq!(b"bar", &read_buf);
+/// decrypter.read_exact(&mut read_buf)?;
+/// assert_eq!(b"baz", &read_buf);
+/// assert_eq!(0, decrypter.read(&mut read_buf)?, "EOF");
+/// # Ok(())
+/// # }
+/// ```
+///
+/// Seek to the end of the same file.
+///
+/// ```rust
+/// # use std::io::prelude::*;
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+/// # let key = bessie::generate_key();
+/// # let ciphertext = bessie::encrypt(&key, b"foobarbaz");
+/// # let mut some_file = std::io::Cursor::new(ciphertext);
+/// // let key = ...;
+/// // let some_file = std::fs::File::open(...)?;
+/// let mut decrypter = bessie::DecryptReader::new(&key, some_file);
+/// decrypter.seek(std::io::SeekFrom::End(-3))?;
+/// let mut rest = String::new();
+/// decrypter.read_to_string(&mut rest)?;
+/// assert_eq!("baz", rest);
+/// # Ok(())
+/// # }
+/// ```
 #[derive(Clone)]
 pub struct DecryptReader<R: Read> {
     inner_reader: R,
@@ -406,6 +535,7 @@ pub struct DecryptReader<R: Read> {
 }
 
 impl<R: Read> DecryptReader<R> {
+    /// Construct a new `DecryptReader` from a key and a stream of ciphertext.
     pub fn new(key: &Key, inner_reader: R) -> Self {
         Self {
             inner_reader,
@@ -420,6 +550,8 @@ impl<R: Read> DecryptReader<R> {
         }
     }
 
+    /// Consume self and return the inner reader. Note any decrypted plaintext in the internal
+    /// buffer will be lost.
     pub fn into_inner(self) -> R {
         self.inner_reader
     }
