@@ -1,11 +1,14 @@
 [package]
 name = "bessie"
 version = "0.0.1"
-edition = "2021"
 description = "an authenticated, chunked cipher based on BLAKE3"
+authors = ["Jack O'Connor <oconnor663@gmail.com>"]
+license = "CC0-1.0 OR Apache-2.0"
 readme = "../../README.md"
 repository = "https://github.com/oconnor663/bessie"
-license = "CC0-1.0 OR Apache-2.0"
+documentation = "https://docs.rs/bessie"
+
+edition = "2021"
 
 [dependencies]
 blake3 = "1"
