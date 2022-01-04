@@ -45,8 +45,8 @@ type Nonce = [u8; NONCE_LEN];
 ///
 /// Errors could represent either corruption, where ciphertext bytes or key bytes have been
 /// changed, or truncation, where a valid ciphertext has been cut short. Some truncations are also
-/// indistinguishable from corruption. `Error::to_string` distinguishes between these two cases to
-/// help with debugging, but application code should treat them as equivalent.
+/// indistinguishable from corruption. `Error::to_string` does its best to distinguish between
+/// these two cases to help with debugging, but application code should treat them as equivalent.
 #[derive(Debug)]
 pub struct Error {
     msg: &'static str,
