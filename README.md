@@ -1,4 +1,6 @@
-# Bessie [![Actions Status](https://github.com/oconnor663/bessie/workflows/tests/badge.svg)](https://github.com/oconnor663/bessie/actions) [![crates.io](https://img.shields.io/crates/v/bessie.svg)](https://crates.io/crates/bessie) [![crates.io](https://img.shields.io/crates/v/bessie_bin.svg)](https://crates.io/crates/bessie_bin)
+<h1>Bessie<a href="https://github.com/oconnor663/bessie/actions"><img align="right" src="https://github.com/oconnor663/bessie/workflows/tests/badge.svg"></a></h1>
+
+[docs.rs](https://docs.rs/bessie) — [crates.io lib](https://crates.io/crates/bessie) — [crates.io bin](https://crates.io/crates/bessie_bin)
 
 Bessie is an authenticated, chunked cipher based on
 [BLAKE3](https://github.com/BLAKE3-team/BLAKE3). Right now it's in the early
