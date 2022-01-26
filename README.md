@@ -10,9 +10,10 @@ implementation of this design is blocked on some upstream refactoring of
 
 Although the Bessie cipher and its library implementations are eventually
 intended for production use, the `bessie` CLI tool will always be for testing
-and demo purposes only. A real-world encryption CLI needs to support public-key
-encryption and various ways of encoding and managing keys, neither of which are
-in scope for this project. If you need a real-world encryption CLI, consider
+and demo purposes only. A general-purpose encryption CLI for real people needs
+to support public-key encryption and various ways of encoding and managing
+keys, neither of which are in scope for this project. If you are a real person
+and you need a general-purpose encryption CLI, consider
 [`age`](https://github.com/FiloSottile/age).
 
 ## Usage
