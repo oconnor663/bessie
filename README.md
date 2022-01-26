@@ -4,7 +4,9 @@
 
 Bessie is an authenticated, chunked cipher based on
 [BLAKE3](https://github.com/BLAKE3-team/BLAKE3). Right now it's in the early
-design stages. See [`design.md`](./design.md).
+design stages. See [`design.md`](./design.md). A high-performance
+implementation of this design is blocked on some upstream refactoring of
+`blake3`, to add SIMD optimizations to extended outputs.
 
 Although the Bessie cipher and its library implementations are eventually
 intended for production use, the `bessie` CLI tool will always be for testing
