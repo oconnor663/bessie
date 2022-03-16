@@ -89,62 +89,68 @@ impl Write for Output {
     }
 }
 
-fn encrypt(key: [u8; 32], mut input: Input, mut output: Output) {
+fn encrypt(key: [u8; 32], mut input: Input, mut output: Output) -> anyhow::Result<()> {
     let mut encrypter = bessie::EncryptWriter::new(&key, &mut output);
-    io::copy(&mut input, &mut encrypter).expect("IO error");
-    encrypter.finalize().expect("IO error");
+    io::copy(&mut input, &mut encrypter)?;
+    encrypter.finalize()?;
+    Ok(())
 }
 
-fn decrypt(key: [u8; 32], mut input: Input, mut output: Output, seek: Option<u64>) {
+fn decrypt(
+    key: [u8; 32],
+    mut input: Input,
+    mut output: Output,
+    seek: Option<u64>,
+) -> anyhow::Result<()> {
     let mut decrypter = bessie::DecryptReader::new(&key, &mut input);
     if let Some(offset) = seek {
-        decrypter
-            .seek(io::SeekFrom::Start(offset))
-            .expect("seek error");
+        decrypter.seek(io::SeekFrom::Start(offset))?;
     }
     let result = io::copy(&mut decrypter, &mut output);
     if let Err(e) = result {
         if e.kind() != io::ErrorKind::BrokenPipe {
-            panic!("decryption error: {}", e);
+            anyhow::bail!("decryption error: {}", e);
         }
     }
+    Ok(())
 }
 
-fn handle_common_args(common: &CommonSubcommandArgs) -> ([u8; 32], Input, Output) {
+fn handle_common_args(common: &CommonSubcommandArgs) -> anyhow::Result<([u8; 32], Input, Output)> {
     let key_vec = if common.key == "zero" {
         vec![0; 32]
     } else {
-        hex::decode(&common.key).expect("invalid hex")
+        hex::decode(&common.key)?
     };
-    let key_array: [u8; 32] = key_vec[..].try_into().expect("key must be 32 bytes");
+    let key_array: [u8; 32] = key_vec[..].try_into()?;
     let input = if let Some(path) = &common.input {
-        Input::File(File::open(path).expect("opening input file failed"))
+        Input::File(File::open(path)?)
     } else {
         Input::Stdin
     };
     let output = if let Some(path) = &common.output {
-        Output::File(File::create(path).expect("creating output file failed"))
+        Output::File(File::create(path)?)
     } else {
         Output::Stdout
     };
-    (key_array, input, output)
+    Ok((key_array, input, output))
 }
 
-fn main() {
+fn main() -> anyhow::Result<()> {
     match Args::parse() {
         Args {
             sub: Subcommand::Encrypt { common },
             ..
         } => {
-            let (key, input, output) = handle_common_args(&common);
-            encrypt(key, input, output);
+            let (key, input, output) = handle_common_args(&common)?;
+            encrypt(key, input, output)?;
         }
         Args {
             sub: Subcommand::Decrypt { common, seek },
             ..
         } => {
-            let (key, input, output) = handle_common_args(&common);
-            decrypt(key, input, output, seek);
+            let (key, input, output) = handle_common_args(&common)?;
+            decrypt(key, input, output, seek)?;
         }
     }
+    Ok(())
 }
