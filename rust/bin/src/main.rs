@@ -39,7 +39,7 @@ struct CommonSubcommandArgs {
 
 #[test]
 fn test_clap_asserts() {
-    <Args as clap::IntoApp>::into_app().debug_assert();
+    <Args as clap::CommandFactory>::command().debug_assert();
 }
 
 enum Input {
