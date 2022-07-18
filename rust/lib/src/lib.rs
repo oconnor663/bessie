@@ -215,6 +215,9 @@ fn generate_nonce() -> Nonce {
 }
 
 /// Encrypt a message and return the ciphertext as a `Vec<u8>`.
+///
+/// This function generates a new random nonce internally, so its output will be different every
+/// time, even with exactly the same inputs.
 pub fn encrypt(key: &Key, plaintext: &[u8]) -> Vec<u8> {
     let ciphertext_len: usize = ciphertext_len(plaintext.len() as u64)
         .expect("length overflows a u64")
@@ -229,6 +232,9 @@ pub fn encrypt(key: &Key, plaintext: &[u8]) -> Vec<u8> {
 ///
 /// This function does not allocate memory. However, `ciphertext.len()` must be exactly equal to
 /// [`ciphertext_len(plaintext.len())`](ciphertext_len), or else this function will panic.
+///
+/// This function generates a new random nonce internally, so its output will be different every
+/// time, even with exactly the same inputs.
 pub fn encrypt_to_slice(key: &Key, plaintext: &[u8], ciphertext: &mut [u8]) {
     let nonce = generate_nonce();
     ciphertext[..NONCE_LEN].copy_from_slice(&nonce);
@@ -365,6 +371,8 @@ pub struct EncryptWriter<W: Write> {
 
 impl<W: Write> EncryptWriter<W> {
     /// Construct a new `EncryptWriter` from a key and an output stream.
+    ///
+    /// Each `EncryptWriter` is created with a new, random, internal nonce.
     pub fn new(key: &Key, inner_writer: W) -> Self {
         Self {
             inner_writer,
