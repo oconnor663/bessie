@@ -8,6 +8,28 @@ design stages. See [`design.md`](./design.md). A high-performance
 implementation of this design is blocked on some upstream refactoring of
 `blake3`, to add SIMD optimizations to extended outputs.
 
+Features and design goals:
+
+- general-purpose authenticated encryption
+- no practical limits on the number or size of messages
+- internal random nonce generation, to prevent mistakes
+- streaming encryption and decryption of large messages
+- seekable decryption of large messages
+- low overhead for small messages
+- key commitment
+
+Non-features and non-goals:
+
+- Not formally/strongly misuse-resistant. Generating random nonces internally
+  avoids a lot of common mistakes, and mixing auth tags into the stream makes
+  nonce reuse somewhat less catastrophic. But nonce reuse does allow an
+  attacker to mix-and-match chunks from different messages, and
+  chunked/streaming constructions are also [inherently vulnerable to nonce
+  reuse exploits](https://web.cs.ucdavis.edu/~rogaway/papers/oae.pdf) that
+  all-at-once constructions like AES-SIV are not.
+- No built-in associated data parameters. Callers who need associated data can
+  mix it with their key using a KDF or a keyed hash.
+
 Although the Bessie cipher and its library implementations are eventually
 intended for production use, the `bessie` CLI tool will always be for testing
 and demo purposes only. A general-purpose encryption CLI for real people needs
