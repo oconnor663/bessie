@@ -21,3 +21,17 @@ def test_round_trip() -> None:
         ciphertext = encrypt(key, input)
         plaintext = decrypt(key, ciphertext)
         assert input == plaintext
+
+
+def test_bad_ciphertext() -> None:
+    for length in TEST_LENGTHS:
+        print("length:", length)
+        input = secrets.token_bytes(length)
+        key = secrets.token_bytes(KEY_LEN)
+        ciphertext = bytearray(encrypt(key, input))
+        ciphertext[-1] ^= 1
+        try:
+            decrypt(key, ciphertext)
+            raise RuntimeError("should never get here")
+        except ValueError:
+            pass
