@@ -228,6 +228,33 @@ pub fn encrypt(key: &Key, plaintext: &[u8]) -> Vec<u8> {
     ciphertext
 }
 
+/// Functions that take a nonce from the caller, mainly for testing
+pub mod testing {
+    use super::*;
+
+    /// Like [`encrypt`](crate::encrypt), but the nonce comes from the caller. CAUTION! This is
+    /// security-sensitive.
+    ///
+    /// It's a security requirement that a given key/nonce pair must never be used more than once.
+    /// If a nonce is reused, some confidentiality and authenticity is lost.  Bessie normally
+    /// prevents this by generating random nonces internally. This function takes the nonce from
+    /// the caller, which makes it the caller's responsibility to avoid nonce reuse.
+    ///
+    /// The most common reason a caller would want to use this is test vectors. Generating nonces
+    /// randomly means that you never produce the same ciphertext twice. This is important for
+    /// security in real world use, but it means you can't compare your output to known-good test
+    /// vectors in development. This function is a workaround for that.
+    pub fn encrypt_with_nonce(key: &Key, nonce: &Nonce, plaintext: &[u8]) -> Vec<u8> {
+        let ciphertext_len: usize = ciphertext_len(plaintext.len() as u64)
+            .expect("length overflows a u64")
+            .try_into()
+            .expect("length overflows a usize");
+        let mut ciphertext = vec![0; ciphertext_len];
+        encrypt_to_slice_with_nonce(key, nonce, plaintext, &mut ciphertext);
+        ciphertext
+    }
+}
+
 /// Encrypt a message and write the ciphertext to an existing slice.
 ///
 /// This function does not allocate memory. However, `ciphertext.len()` must be exactly equal to
@@ -237,7 +264,11 @@ pub fn encrypt(key: &Key, plaintext: &[u8]) -> Vec<u8> {
 /// time, even with exactly the same inputs.
 pub fn encrypt_to_slice(key: &Key, plaintext: &[u8], ciphertext: &mut [u8]) {
     let nonce = generate_nonce();
-    ciphertext[..NONCE_LEN].copy_from_slice(&nonce);
+    encrypt_to_slice_with_nonce(key, &nonce, plaintext, ciphertext);
+}
+
+fn encrypt_to_slice_with_nonce(key: &Key, nonce: &Nonce, plaintext: &[u8], ciphertext: &mut [u8]) {
+    ciphertext[..NONCE_LEN].copy_from_slice(nonce);
 
     // Encrypt all non-final chunks.
     let mut chunk_index = 0;

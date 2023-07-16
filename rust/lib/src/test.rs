@@ -274,3 +274,12 @@ fn test_zeroing_after_decryption_failure() {
     decrypt_to_slice(&test_key(), &ciphertext, &mut plaintext).unwrap_err();
     assert_eq!(plaintext, vec![0; plaintext.len()]);
 }
+
+#[test]
+fn test_encrypt_with_nonce() {
+    let input = vec![0xaa; 2 * CHUNK_LEN + 1];
+    let ciphertext = encrypt(&test_key(), &input);
+    let nonce = ciphertext[..NONCE_LEN].try_into().unwrap();
+    let ciphertext_with_nonce = testing::encrypt_with_nonce(&test_key(), nonce, &input);
+    assert_eq!(ciphertext, ciphertext_with_nonce);
+}
