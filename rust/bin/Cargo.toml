@@ -16,7 +16,7 @@ path = "src/main.rs"
 [dependencies]
 anyhow = "1.0.56"
 bessie = { version = "0.0", path = "../lib" }
-clap = { version = "3.0.0", features = ["derive"] }
+clap = { version = "4.3.12", features = ["derive"] }
 hex = "0.4.3"
 
 [dev-dependencies]
