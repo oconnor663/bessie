@@ -15,4 +15,6 @@ blake3 = "1"
 rand = "0.8"
 
 [dev-dependencies]
+duct = "0.13.6"
+hex = "0.4.3"
 page_size = "0.4"

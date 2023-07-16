@@ -8,7 +8,7 @@ import sys
 HERE = pathlib.Path(__file__).parent
 
 
-def run(cwd, args, env={}):
+def run(cwd: str, args: list[str], env: dict[str, str] = {}) -> None:
     result = subprocess.run(args, cwd=(HERE / cwd), env=(os.environ | env))
     if result.returncode != 0:
         print("TEST FAILED!!!")
