@@ -30,13 +30,13 @@ def encrypt(key: bytes, plaintext: bytes) -> bytes:
     ciphertext = bytearray(nonce)
     chunk_start = 0
     while True:
-        chunk = plaintext[chunk_start : chunk_start + CHUNK_LEN]
+        plaintext_chunk = plaintext[chunk_start : chunk_start + CHUNK_LEN]
         chunk_index = chunk_start // CHUNK_LEN
-        is_final = len(chunk) < CHUNK_LEN
+        is_final = len(plaintext_chunk) < CHUNK_LEN
         auth_key, stream_key = chunk_keys(key, nonce, chunk_index, is_final)
-        tag = blake3(chunk, key=auth_key).digest()
-        stream = blake3(tag, key=stream_key).digest(len(chunk))
-        ciphertext.extend(xor(chunk, stream))
+        tag = blake3(plaintext_chunk, key=auth_key).digest()
+        stream = blake3(tag, key=stream_key).digest(len(plaintext_chunk))
+        ciphertext.extend(xor(plaintext_chunk, stream))
         ciphertext.extend(tag)
         if is_final:
             return ciphertext
@@ -49,18 +49,18 @@ def decrypt(key: bytes, ciphertext: bytes) -> bytes:
     plaintext = bytearray()
     chunk_start = NONCE_LEN
     while True:
-        chunk = ciphertext[chunk_start : chunk_start + CIPHERTEXT_CHUNK_LEN]
-        assert len(chunk) >= TAG_LEN
-        chunk_index = chunk_start // (CIPHERTEXT_CHUNK_LEN)
-        is_final = len(chunk) < (CIPHERTEXT_CHUNK_LEN)
+        ciphertext_chunk = ciphertext[chunk_start : chunk_start + CIPHERTEXT_CHUNK_LEN]
+        assert len(ciphertext_chunk) >= TAG_LEN
+        chunk_index = chunk_start // CIPHERTEXT_CHUNK_LEN
+        is_final = len(ciphertext_chunk) < CIPHERTEXT_CHUNK_LEN
         auth_key, stream_key = chunk_keys(key, nonce, chunk_index, is_final)
-        tag = chunk[-TAG_LEN:]
-        stream = blake3(tag, key=stream_key).digest(len(chunk) - TAG_LEN)
-        chunk_plaintext = xor(chunk[:-TAG_LEN], stream)
-        expected_tag = blake3(chunk_plaintext, key=auth_key).digest()
+        tag = ciphertext_chunk[-TAG_LEN:]
+        stream = blake3(tag, key=stream_key).digest(len(ciphertext_chunk) - TAG_LEN)
+        plaintext_chunk = xor(ciphertext_chunk[:-TAG_LEN], stream)
+        expected_tag = blake3(plaintext_chunk, key=auth_key).digest()
         if not secrets.compare_digest(tag, expected_tag):
             raise ValueError("invalid ciphertext")
-        plaintext.extend(chunk_plaintext)
+        plaintext.extend(plaintext_chunk)
         if is_final:
             return plaintext
         chunk_start += CIPHERTEXT_CHUNK_LEN
