@@ -109,20 +109,6 @@ fn chunk_keys(
     )
 }
 
-fn xor_stream(mut stream_reader: blake3::OutputReader, input: &[u8], output: &mut [u8]) {
-    assert_eq!(input.len(), output.len());
-    let mut position = 0;
-    while position < input.len() {
-        let mut stream_block = [0; 64];
-        stream_reader.fill(&mut stream_block);
-        let take = min(64, input.len() - position);
-        for _ in 0..take {
-            output[position] = input[position] ^ stream_block[position % 64];
-            position += 1;
-        }
-    }
-}
-
 fn encrypt_chunk(
     long_term_key: &Key,
     nonce: &Nonce,
@@ -139,10 +125,11 @@ fn encrypt_chunk(
     }
     let (auth_key, stream_key) = chunk_keys(long_term_key, nonce, chunk_index, final_flag);
     let tag = blake3::keyed_hash(&auth_key, plaintext);
-    let stream_reader = blake3::Hasher::new_keyed(&stream_key)
+    ciphertext[..plaintext.len()].copy_from_slice(plaintext);
+    blake3::Hasher::new_keyed(&stream_key)
         .update(tag.as_bytes())
-        .finalize_xof();
-    xor_stream(stream_reader, plaintext, &mut ciphertext[..plaintext.len()]);
+        .finalize_xof()
+        .fill_xor(&mut ciphertext[..plaintext.len()]);
     ciphertext[plaintext.len()..].copy_from_slice(tag.as_bytes());
 }
 
@@ -165,10 +152,11 @@ fn decrypt_chunk(
     }
     let (auth_key, stream_key) = chunk_keys(long_term_key, nonce, chunk_index, final_flag);
     let tag_bytes: &[u8; TAG_LEN] = ciphertext[ciphertext.len() - TAG_LEN..].try_into().unwrap();
-    let stream_reader = blake3::Hasher::new_keyed(&stream_key)
+    plaintext.copy_from_slice(&ciphertext[..plaintext.len()]);
+    blake3::Hasher::new_keyed(&stream_key)
         .update(tag_bytes)
-        .finalize_xof();
-    xor_stream(stream_reader, &ciphertext[..plaintext.len()], plaintext);
+        .finalize_xof()
+        .fill_xor(plaintext);
     let computed_tag: blake3::Hash = blake3::keyed_hash(&auth_key, plaintext);
     // NB: blake3::Hash implements constant-time equality checking.
     if &computed_tag != tag_bytes {

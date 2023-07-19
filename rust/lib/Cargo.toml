@@ -11,7 +11,8 @@ documentation = "https://docs.rs/bessie"
 edition = "2021"
 
 [dependencies]
-blake3 = "1"
+blake3 = { version = "1", path = "../../../BLAKE3" }
+blake3_guts = { path = "../../../BLAKE3/rust/guts" }
 rand = "0.8"
 
 [dev-dependencies]
