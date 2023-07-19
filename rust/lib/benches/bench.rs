@@ -48,7 +48,8 @@ impl RandomInput {
 fn bench_encrypt(b: &mut Bencher, size: usize) {
     let mut r = RandomInput::new(b, size);
     let key: [u8; 32] = rand::random();
-    b.iter(|| bessie::encrypt(&key, r.get()));
+    let mut ciphertext = vec![0u8; bessie::ciphertext_len(size as u64).unwrap() as usize];
+    b.iter(|| bessie::encrypt_to_slice(&key, r.get(), &mut ciphertext));
 }
 
 #[bench]
@@ -80,7 +81,8 @@ fn bench_decrypt(b: &mut Bencher, size: usize) {
     let mut r = RandomInput::new(b, size);
     let key: [u8; 32] = rand::random();
     let ciphertext = bessie::encrypt(&key, r.get());
-    b.iter(|| bessie::decrypt(&key, &ciphertext));
+    let mut plaintext = vec![0u8; bessie::plaintext_len(ciphertext.len() as u64).unwrap() as usize];
+    b.iter(|| bessie::decrypt_to_slice(&key, &ciphertext, &mut plaintext));
 }
 
 #[bench]
