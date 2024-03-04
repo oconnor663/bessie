@@ -139,14 +139,12 @@ fn main() -> anyhow::Result<()> {
     match Args::parse() {
         Args {
             sub: Subcommand::Encrypt { common },
-            ..
         } => {
             let (key, input, output) = handle_common_args(&common)?;
             encrypt(key, input, output)?;
         }
         Args {
             sub: Subcommand::Decrypt { common, seek },
-            ..
         } => {
             let (key, input, output) = handle_common_args(&common)?;
             decrypt(key, input, output, seek)?;
