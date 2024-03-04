@@ -1,6 +1,6 @@
 [package]
 name = "bessie_bin"
-version = "0.0.1"
+version = "0.0.2"
 description = "a demo/test CLI for the Bessie cipher, NOT FOR PRODUCTION USE"
 authors = ["Jack O'Connor <oconnor663@gmail.com>"]
 license = "CC0-1.0 OR Apache-2.0"
