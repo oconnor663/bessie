@@ -112,12 +112,15 @@ fn chunk_keys(
 fn xor_stream(mut stream_reader: blake3::OutputReader, input: &[u8], output: &mut [u8]) {
     assert_eq!(input.len(), output.len());
     let mut position = 0;
+    // 16 blocks is the current max SIMD degree (AVX-512).
+    const STREAM_ARRAY_LEN: usize = 16 * 64;
+    let mut stream_array = [0; STREAM_ARRAY_LEN];
     while position < input.len() {
-        let mut stream_block = [0; 64];
-        stream_reader.fill(&mut stream_block);
-        let take = min(64, input.len() - position);
+        let take = min(STREAM_ARRAY_LEN, input.len() - position);
+        let stream_slice = &mut stream_array[..take];
+        stream_reader.fill(stream_slice);
         for _ in 0..take {
-            output[position] = input[position] ^ stream_block[position % 64];
+            output[position] = input[position] ^ stream_slice[position % STREAM_ARRAY_LEN];
             position += 1;
         }
     }
