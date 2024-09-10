@@ -3,10 +3,9 @@
 [docs.rs](https://docs.rs/bessie) — [crates.io lib](https://crates.io/crates/bessie) — [crates.io bin](https://crates.io/crates/bessie_bin)
 
 Bessie is an authenticated, chunked cipher based on
-[BLAKE3](https://github.com/BLAKE3-team/BLAKE3). Right now it's in the early
-design stages. See [`design.md`](./design.md). A high-performance
-implementation of this design is blocked on some upstream refactoring of
-`blake3`, to add SIMD optimizations to extended outputs.
+[BLAKE3](https://github.com/BLAKE3-team/BLAKE3). The [design](./design.md) has
+been stable for a while, but it hasn't been audited or used in the real world
+as far as I know. Use with caution.
 
 Features and design goals:
 
