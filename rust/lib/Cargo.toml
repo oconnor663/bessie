@@ -12,7 +12,7 @@ edition = "2021"
 
 [dependencies]
 blake3 = "1"
-rand = "0.8"
+rand = "0.9"
 
 [dev-dependencies]
 duct = "0.13.6"
