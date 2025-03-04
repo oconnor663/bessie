@@ -14,7 +14,6 @@ Features and design goals:
 - internal random nonce generation, to prevent mistakes
 - streaming encryption and decryption of large messages
 - seekable decryption of large messages
-- low overhead for small messages
 - key commitment
 
 Non-features and non-goals:
@@ -33,7 +32,7 @@ Non-features and non-goals:
   the wire and short-message performance above all else. They're often used
   with ephemeral keys, where random nonces and key commitment aren't important.
   For comparison, an empty AES-GCM ciphertext is 16 bytes, while an empty
-  Bessie ciphertext is 56 bytes. For a TLS-oriented design based on BLAKE3, see
+  Bessie ciphertext is 56 bytes. For a TLS-oriented cipher based on BLAKE3, see
   [BLAKE3-AEAD](https://github.com/oconnor663/blake3_aead).
 
 Although the Bessie cipher and its library implementations are eventually
