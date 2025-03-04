@@ -28,6 +28,13 @@ Non-features and non-goals:
   all-at-once constructions like AES-SIV are not.
 - No built-in associated data parameters. Callers who need associated data can
   mix it with their key using a KDF or a keyed hash.
+- Not optimal as a building block for encrypted network protocols like TLS.
+  TLS-oriented ciphers like AES-GCM and ChaCha20-Poly1305 prioritize bytes on
+  the wire and short-message performance above all else. They're often used
+  with ephemeral keys, where random nonces and key commitment aren't important.
+  For comparison, an empty AES-GCM ciphertext is 16 bytes, while an empty
+  Bessie ciphertext is 56 bytes. For a TLS-oriented design based on BLAKE3, see
+  [BLAKE3-AEAD](https://github.com/oconnor663/blake3_aead).
 
 Although the Bessie cipher and its library implementations are eventually
 intended for production use, the `bessie` CLI tool will always be for testing
