@@ -20,5 +20,5 @@ clap = { version = "4.3.12", features = ["derive"] }
 hex = "0.4.3"
 
 [dev-dependencies]
-duct = "0.13.5"
+duct = "1.0.0"
 tempfile = "3.2.0"
