@@ -11,13 +11,13 @@ fn test_input(len: usize) -> Vec<u8> {
 }
 
 fn run_python_script(script: &str, args: Vec<String>, input: &[u8]) -> Vec<u8> {
-    let mut python_args = vec!["-c", script];
+    let mut uv_args = vec!["run", "python", "-c", script];
     for arg in &args {
-        python_args.push(arg);
+        uv_args.push(arg);
     }
     let cargo_toml_path = env!("CARGO_MANIFEST_DIR");
     let python_dir = Path::new(&cargo_toml_path).join("../../python");
-    let output = duct::cmd("python3", python_args)
+    let output = duct::cmd("uv", uv_args)
         .stdin_bytes(input)
         .stdout_capture()
         .stderr_capture()

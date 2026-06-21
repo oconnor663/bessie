@@ -22,6 +22,6 @@ run("rust/lib", ["cargo", "test", "--no-default-features"])
 run("rust/lib", ["cargo", "test", "--all-targets"], env={"RUSTC_BOOTSTRAP": "1"})
 run("rust/bin", ["cargo", "test"])
 
-run("python", ["pytest", "--verbose"])
+run("python", ["uv", "run", "pytest", "--verbose"])
 
 print("All tests passed.")
