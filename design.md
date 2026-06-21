@@ -3,7 +3,7 @@
 ## Encrypt
 
 - generate a random 24-byte nonce
-- for each chunk:
+- for each 16 KiB chunk of plaintext, with the final chunk always short or empty:
     - (chunk_auth_key, chunk_stream_key) = keyed_hash(LTK, nonce + chunk_index + final_flag)[:64]
         - final_flag is one byte, 0 for non-final chunks and 1 for the final (short) chunk
     - auth_tag = keyed_hash(chunk_auth_key, chunk)[:32]
@@ -15,7 +15,8 @@
 
 ## Decrypt
 
-- for each chunk:
+- for each chunk of ciphertext (<=16 KiB chunk_ciphertext + 32 byte auth_tag):
+    - final flag is 1 if len(chunk_ciphertext) < 16 KiB, otherwise 0
     - (chunk_auth_key, chunk_stream_key) = keyed_hash(LTK, nonce + chunk_index + final_flag)[:64]
     - chunk_stream = keyed_hash(chunk_stream_key, auth_tag)[:chunk_len]
     - chunk = xor(chunk_ciphertext, chunk_stream)
