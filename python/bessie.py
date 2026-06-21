@@ -1,4 +1,5 @@
 from blake3 import blake3
+from collections.abc import Buffer
 import secrets
 
 KEY_LEN: int = blake3.key_size
@@ -11,21 +12,26 @@ CIPHERTEXT_CHUNK_LEN: int = CHUNK_LEN + TAG_LEN
 
 
 def chunk_keys(
-    key: bytes, nonce: bytes, chunk_index: int, is_final: bool
+    key: Buffer, nonce: Buffer, chunk_index: int, is_final: bool
 ) -> tuple[bytes, bytes]:
-    input = nonce + chunk_index.to_bytes(8, "little") + bytes([is_final])
-    output = blake3(input, key=key).digest(2 * KEY_LEN)
+    hasher = blake3(key=key)
+    hasher.update(nonce)
+    hasher.update(chunk_index.to_bytes(8, "little"))
+    hasher.update(bytes([is_final]))
+    output = hasher.digest(2 * KEY_LEN)
     auth_key = output[:KEY_LEN]
     stream_key = output[KEY_LEN:]
     return (auth_key, stream_key)
 
 
-def xor(a: bytes, b: bytes) -> bytes:
+def xor(a: Buffer, b: Buffer) -> bytes:
+    a, b = memoryview(a), memoryview(b)
     assert len(a) == len(b)
     return bytes(x ^ y for x, y in zip(a, b))
 
 
-def encrypt(key: bytes, plaintext: bytes) -> bytes:
+def encrypt(key: Buffer, plaintext: Buffer) -> bytearray:
+    key, plaintext = memoryview(key), memoryview(plaintext)
     nonce = secrets.token_bytes(NONCE_LEN)
     ciphertext = bytearray(nonce)
     chunk_start = 0
@@ -43,7 +49,8 @@ def encrypt(key: bytes, plaintext: bytes) -> bytes:
         chunk_start += CHUNK_LEN
 
 
-def decrypt(key: bytes, ciphertext: bytes) -> bytes:
+def decrypt(key: Buffer, ciphertext: Buffer) -> bytearray:
+    key, ciphertext = memoryview(key), memoryview(ciphertext)
     assert len(ciphertext) >= NONCE_LEN
     nonce = ciphertext[:NONCE_LEN]
     plaintext = bytearray()
