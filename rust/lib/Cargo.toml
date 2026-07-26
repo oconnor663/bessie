@@ -12,9 +12,9 @@ edition = "2021"
 
 [dependencies]
 blake3 = "1"
-rand = "0.9"
+rand = "0.10"
 
 [dev-dependencies]
-duct = "0.13.6"
+duct = "1.1.1"
 hex = "0.4.3"
 page_size = "0.6"
